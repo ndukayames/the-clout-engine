@@ -22,7 +22,7 @@ export class AuthService {
 
   async signupUser(dto: SignupDto) {
     try {
-      const existingUser = await this.cognito
+      await this.cognito
         .adminGetUser({
           Username: dto.username,
           UserPoolId: this.userPoolId,
@@ -58,14 +58,14 @@ export class AuthService {
   }
 
   async loginUser(dto: SignInDto) {
-    const existingUser = await this.cognito
+    await this.cognito
       .adminGetUser({
         Username: dto.username,
         UserPoolId: this.userPoolId,
       })
       .promise();
 
-    const loginRequest = this.cognito
+    const loginRequest = await this.cognito
       .initiateAuth({
         AuthFlow: 'USER_PASSWORD_AUTH',
         ClientId: this.clientId,
@@ -76,6 +76,6 @@ export class AuthService {
       })
       .promise();
 
-    return loginRequest;
+    return loginRequest.AuthenticationResult;
   }
 }

@@ -5,7 +5,7 @@ import { Response } from 'express';
 export class GlobalExceptionHandler implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionHandler.name);
   catch(exception: any, host: ArgumentsHost) {
-    this.logger.debug(exception);
+    this.logger.debug(exception.stack);
 
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
