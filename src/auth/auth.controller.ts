@@ -4,6 +4,8 @@ import { SignupDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signnin.dto';
 import { SignupConfirmationDto } from './dto/signup-confirmation.dto';
 import { IsNotEmpty } from 'class-validator';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ConfirmPasswordDto } from './dto/forgot-password-confirmation.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -30,5 +32,17 @@ export class AuthController {
   @HttpCode(200)
   async loginUser(@Body() dto: SignInDto) {
     return this.authService.loginUser(dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('forgot-password/confirm')
+  @HttpCode(200)
+  async confirmPassword(@Body() dto: ConfirmPasswordDto) {
+    return this.authService.confirmPassword(dto);
   }
 }

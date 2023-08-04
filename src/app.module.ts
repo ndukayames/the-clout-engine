@@ -23,7 +23,7 @@ import { MongooseModule } from '@nestjs/mongoose';
       useFactory: async (configService: ConfigService) => {
         return {
           uri: configService.get<string>('MONGODB_CONN_URI'),
-          connectTimeoutMS: 500,
+          connectTimeoutMS: 10000,
         };
       },
     }),

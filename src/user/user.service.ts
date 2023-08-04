@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { AwsSdkService } from 'src/aws-sdk/aws-sdk.service';
-import { User } from './entity/user';
+import { User, UserDoc } from './entity/user';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { SignupDto } from 'src/auth/dto/signup.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UserService {
@@ -29,7 +31,7 @@ export class UserService {
       username: dto.username,
     });
   }
-  async findUser(username: string, email?: string) {
+  async findUser(username: string, email?: string): Promise<UserDoc | null> {
     const user = await this.userModel.findOne({
       $or: [{ username: username }, { email: email ?? username }],
     });
@@ -37,22 +39,36 @@ export class UserService {
     return user;
   }
 
-  async getProfileDetails(username: string) {
-    const user = this.findUser(username);
+  async getProfileDetails(username: string): Promise<UserDoc | null> {
+    const user = await this.findUser(username);
+    return user;
+  }
+  async updateUser(
+    username: string,
+    dto: UpdateUserProfileDto,
+  ): Promise<UserDoc | null> {
+    const user = await this.findUser(username);
+
+    Object.keys(dto).forEach((key) => {
+      if (dto[key] !== null) {
+        user[key] = dto[key];
+      }
+    });
+    await user.save();
+
     return user;
   }
 
-  // async editProfileDetails(
-  //   username: string,
-  //   newProfileData: UpdateUserProfileDto,
-  // ) {
-  //   const details = await this.cognito.adminUpdateUserAttributes({
-  //     Username: username,
-  //     UserAttributes: [
-  //       {
-  //         Name: 'custom:full_name',
-  //       },
-  //     ],
-  //   });
-  // }
+  async changePassword(username: string, dto: ChangePasswordDto) {
+    await this.cognito
+      .adminSetUserPassword({
+        Password: dto.password,
+        Username: username,
+        UserPoolId: this.userPoolId,
+        Permanent: true,
+      })
+      .promise();
+
+    return 'password changed successfully.';
+  }
 }

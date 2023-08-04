@@ -3,10 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { passportJwtSecret } from 'jwks-rsa';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private userService: UserService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       audience: configService.get('COGNITO_CLIENT_ID'),
@@ -26,10 +30,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     email: string;
     'cognito:username': string;
   }) {
-    return {
-      id: payload.sub,
-      email: payload.email,
-      username: payload['cognito:username'],
-    };
+    const user = await this.userService.findUser(
+      payload['cognito:username'],
+      payload.email,
+    );
+    return user;
   }
 }

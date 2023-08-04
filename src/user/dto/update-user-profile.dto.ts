@@ -1,4 +1,18 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { SignupDto } from 'src/auth/dto/signup.dto';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsEnum,
+  IsString,
+  arrayContains,
+} from 'class-validator';
+import { MusicApp } from '../entity/user';
 
-export class UpdateUserProfileDto extends PartialType(SignupDto) {}
+export class UpdateUserProfileDto {
+  @IsString()
+  fullName: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEnum(MusicApp, { each: true })
+  musicApps: MusicApp[];
+}

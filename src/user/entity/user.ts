@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export enum MusicApp {
   APPLE_MUSIC = 'APPLE_MUSIC',
@@ -22,8 +23,9 @@ export class User {
   @Prop({ required: true, default: false })
   isUserEnabled: boolean;
 
-  @Prop({ required: false, enum: MusicApp })
-  primaryMusicApp: MusicApp;
+  @Prop({ type: [{ type: String, enum: MusicApp }] })
+  musicApps: MusicApp[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+export type UserDoc = HydratedDocument<User>;

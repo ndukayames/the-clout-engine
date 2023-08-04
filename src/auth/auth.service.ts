@@ -7,6 +7,8 @@ import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { SignupConfirmationDto } from './dto/signup-confirmation.dto';
 import { UserService } from 'src/user/user.service';
 import { DuplicateResourceException } from 'src/shared/exceptions/duplicate-resource.exception';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ConfirmPasswordDto } from './dto/forgot-password-confirmation.dto';
 
 @Injectable()
 export class AuthService {
@@ -42,10 +44,6 @@ export class AuthService {
           {
             Name: 'email',
             Value: dto.email,
-          },
-          {
-            Name: 'custom:full_name',
-            Value: dto.full_name,
           },
         ],
       })
@@ -110,5 +108,29 @@ export class AuthService {
       .promise();
 
     return loginRequest.AuthenticationResult;
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<string> {
+    await this.cognito
+      .forgotPassword({
+        ClientId: this.clientId,
+        Username: dto.username,
+      })
+      .promise();
+
+    return 'confirmation code sent to your email.';
+  }
+
+  async confirmPassword(dto: ConfirmPasswordDto): Promise<string> {
+    await this.cognito
+      .confirmForgotPassword({
+        ClientId: this.clientId,
+        ConfirmationCode: dto.code,
+        Password: dto.password,
+        Username: dto.username,
+      })
+      .promise();
+
+    return 'password changed.';
   }
 }
