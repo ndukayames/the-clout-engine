@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { AwsSdkService } from 'src/aws-sdk/aws-sdk.service';
 import { User } from './entity/user';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { SignupDto } from 'src/auth/dto/signup.dto';
 
 @Injectable()
 export class UserService {
@@ -11,6 +14,7 @@ export class UserService {
   private clientId: string;
   constructor(
     private aws: AwsSdkService,
+    @InjectModel(User.name) private userModel: Model<User>,
     private configService: ConfigService,
   ) {
     this.cognito = aws.getCognito();
@@ -18,35 +22,37 @@ export class UserService {
     this.clientId = this.configService.get('COGNITO_CLIENT_ID');
   }
 
-  async getProfileDetails(username: string) {
-    const details = await this.cognito
-      .adminGetUser({
-        Username: username,
-        UserPoolId: this.userPoolId,
-      })
-      .promise();
+  async createUserProfileDetails(dto: SignupDto) {
+    return await this.userModel.create({
+      email: dto.email,
+      fullName: dto.full_name,
+      username: dto.username,
+    });
+  }
+  async findUser(username: string, email?: string) {
+    const user = await this.userModel.findOne({
+      $or: [{ username: username }, { email: email ?? username }],
+    });
 
-    let email: string;
-    let isEmailVerified = false;
-    for (const attribute of details.UserAttributes) {
-      if (attribute.Name.toLowerCase() === 'email') {
-        email = attribute.Value;
-        break;
-      }
-    }
-
-    if (details.UserStatus.toLowerCase() === 'confirmed') {
-      isEmailVerified = true;
-    }
-
-    const user = new User(
-      email,
-      details.Username,
-      isEmailVerified,
-      details.Enabled,
-      details.UserCreateDate,
-      details.UserLastModifiedDate,
-    );
     return user;
   }
+
+  async getProfileDetails(username: string) {
+    const user = this.findUser(username);
+    return user;
+  }
+
+  // async editProfileDetails(
+  //   username: string,
+  //   newProfileData: UpdateUserProfileDto,
+  // ) {
+  //   const details = await this.cognito.adminUpdateUserAttributes({
+  //     Username: username,
+  //     UserAttributes: [
+  //       {
+  //         Name: 'custom:full_name',
+  //       },
+  //     ],
+  //   });
+  // }
 }

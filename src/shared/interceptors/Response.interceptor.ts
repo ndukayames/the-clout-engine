@@ -13,7 +13,7 @@ export class ResponseInterceptor implements NestInterceptor {
       map((data: any) => ({
         success: true,
         statusCode: context.switchToHttp().getResponse().statusCode,
-        result: Object.keys(data).length === 0 ? null : data,
+        result: data,
       })),
     );
   }

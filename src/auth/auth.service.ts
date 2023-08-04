@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { SignInDto } from './dto/signnin.dto';
 import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { SignupConfirmationDto } from './dto/signup-confirmation.dto';
+import { UserService } from 'src/user/user.service';
+import { DuplicateResourceException } from 'src/shared/exceptions/duplicate-resource.exception';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +16,7 @@ export class AuthService {
   constructor(
     private aws: AwsSdkService,
     private configService: ConfigService,
+    private userService: UserService,
   ) {
     this.cognito = aws.getCognito();
     this.userPoolId = this.configService.get('COGNITO_USER_POOL_ID');
@@ -21,16 +24,16 @@ export class AuthService {
   }
 
   async signupUser(dto: SignupDto) {
-    try {
-      await this.cognito
-        .adminGetUser({
-          Username: dto.username,
-          UserPoolId: this.userPoolId,
-        })
-        .promise();
-    } catch (error) {}
+    const existingUser = await this.userService.findUser(
+      dto.username,
+      dto.email,
+    );
+    if (existingUser)
+      throw new DuplicateResourceException('username not available.');
 
-    const request = await this.cognito
+    const newUser = await this.userService.createUserProfileDetails(dto);
+
+    await this.cognito
       .signUp({
         Username: dto.username,
         Password: dto.password,
@@ -40,21 +43,51 @@ export class AuthService {
             Name: 'email',
             Value: dto.email,
           },
+          {
+            Name: 'custom:full_name',
+            Value: dto.full_name,
+          },
         ],
       })
       .promise();
 
-    return request;
+    newUser.isUserEnabled = true;
+    await newUser.save();
+
+    return 'Account created, please verify email';
   }
 
-  async confirmSignUp(dto: SignupConfirmationDto): Promise<void> {
-    await this.cognito
-      .confirmSignUp({
-        ClientId: this.clientId,
-        Username: dto.username,
-        ConfirmationCode: dto.code,
-      })
-      .promise();
+  async resendConfirmationCode(username: string) {
+    const existingUser = await this.userService.findUser(username);
+    if (existingUser.isEmailVerified === false) {
+      await this.cognito
+        .resendConfirmationCode({
+          Username: username,
+          ClientId: this.clientId,
+        })
+        .promise();
+
+      return 'confirmation code sent.';
+    }
+    return 'account already confirmed';
+  }
+
+  async confirmSignUp(dto: SignupConfirmationDto): Promise<string> {
+    const existingUser = await this.userService.findUser(dto.username);
+
+    if (existingUser.isEmailVerified === false) {
+      await this.cognito
+        .confirmSignUp({
+          ClientId: this.clientId,
+          Username: dto.username,
+          ConfirmationCode: dto.code,
+        })
+        .promise();
+      existingUser.isEmailVerified = true;
+      await existingUser.save();
+    }
+
+    return 'email verification successful.';
   }
 
   async loginUser(dto: SignInDto) {
